@@ -1,6 +1,6 @@
 Config = {}
 
-Config.SpawnInterval = 1
+Config.SpawnInterval = 30
 
 Config.FortuneTellerModel = "cs_johnthebaptisingmadman"
 
@@ -24,4 +24,5 @@ Config.Fortunes = {
 Config.Curses = {
     slow = { description = "Your steps grow heavy, as if wading through molasses.", lifted = "The weight lifts from your limbs.", duration = 30000 },
     health_drain = { description = "You feel your life slipping away...", lifted = "The pain fades.", duration = 20000, damage = 50, interval = 2000 },
+
 }
