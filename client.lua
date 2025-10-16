@@ -2,13 +2,15 @@ local RSGCore = exports['rsg-core']:GetCoreObject()
 local fortuneTeller, candle
 local fortuneActive = false
 
--- Cooldown tracking
+
 local lastReadingTime = 0
 local COOLDOWN_DURATION = 300000 -- 5 minutes in ms
 
--------------------------------------
--- 🧙‍♀️ Spawn Fortune Teller
--------------------------------------
+
+local lastErrorNotify = 0
+local ERROR_NOTIFY_COOLDOWN = 10000 -- 10 seconds in ms
+
+
 local function spawnFortuneTeller()
     if fortuneActive then return end
 
@@ -72,11 +74,14 @@ local function spawnFortuneTeller()
             canInteract = function()
                 local timePassed = GetGameTimer() - lastReadingTime
                 if timePassed < COOLDOWN_DURATION then
-                    lib.notify({
-                        title = 'John',
-                        description = 'The spirits require time to realign. Wait ' .. math.ceil((COOLDOWN_DURATION - timePassed) / 60000) .. ' minutes.',
-                        type = 'error'
-                    })
+                    if GetGameTimer() - lastErrorNotify > ERROR_NOTIFY_COOLDOWN then
+                        lib.notify({
+                            title = 'John',
+                            description = 'The spirits require time to realign. Wait ' .. math.ceil((COOLDOWN_DURATION - timePassed) / 60000) .. ' minutes.',
+                            type = 'error'
+                        })
+                        lastErrorNotify = GetGameTimer()
+                    end
                     return false
                 end
                 return true
@@ -97,9 +102,7 @@ local function spawnFortuneTeller()
     })
 end
 
--------------------------------------
--- 🕯️ Despawn
--------------------------------------
+
 local function despawnFortuneTeller()
     if fortuneTeller then
         if GetResourceState('ox_target') == 'started' then
@@ -117,9 +120,7 @@ local function despawnFortuneTeller()
     fortuneActive = false
 end
 
--------------------------------------
--- 📜 Menu
--------------------------------------
+
 function openFortuneMenu()
     local timeLeft = COOLDOWN_DURATION - (GetGameTimer() - lastReadingTime)
     local cooldownText = timeLeft > 0 and (' (Cooldown: ' .. math.ceil(timeLeft / 60000) .. ' min)' ) or ''
@@ -141,17 +142,18 @@ function openFortuneMenu()
     lib.showContext('fortune_menu')
 end
 
--------------------------------------
--- 🔮 Reading Logic
--------------------------------------
+
 RegisterNetEvent('fortune_teller:client:getReading', function()
     local timeLeft = COOLDOWN_DURATION - (GetGameTimer() - lastReadingTime)
     if timeLeft > 0 then
-        lib.notify({
-            title = 'Baptist John',
-            description = 'The spirits require time to realign. Wait ' .. math.ceil(timeLeft / 60000) .. ' minutes.',
-            type = 'error'
-        })
+        if GetGameTimer() - lastErrorNotify > ERROR_NOTIFY_COOLDOWN then
+            lib.notify({
+                title = 'Baptist John',
+                description = 'The spirits require time to realign. Wait ' .. math.ceil(timeLeft / 60000) .. ' minutes.',
+                type = 'error'
+            })
+            lastErrorNotify = GetGameTimer()
+        end
         return
     end
 
@@ -181,9 +183,7 @@ RegisterNetEvent('fortune_teller:client:getReading', function()
     end
 end)
 
--------------------------------------
--- 💀 Curse Effects (Alpha/Transparency Removed)
--------------------------------------
+
 RegisterNetEvent('fortune_teller:client:applyCurse', function(curse)
     local data = Config.Curses[curse]
     if not data then return end
@@ -218,9 +218,7 @@ RegisterNetEvent('fortune_teller:client:applyCurse', function(curse)
     end
 end)
 
--------------------------------------
--- ♻️ Auto Spawn / Despawn
--------------------------------------
+
 Citizen.CreateThread(function()
     Wait(3000)
     spawnFortuneTeller()
@@ -232,9 +230,7 @@ Citizen.CreateThread(function()
     end
 end)
 
--------------------------------------
--- 🧹 Cleanup on Stop
--------------------------------------
+
 AddEventHandler('onResourceStop', function(res)
     if GetCurrentResourceName() == res then
         despawnFortuneTeller()
